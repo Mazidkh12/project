@@ -10,6 +10,14 @@
         integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
         crossorigin="anonymous" referrerpolicy="no-referrer" />
   <style>
+    .sidebar {
+      width: 16rem;
+      transform: translateX(0);
+      transition: transform 0.3s ease-in-out;
+    }
+    .sidebar-hidden {
+      transform: translateX(-16rem);
+    }
     .sidebar-minimized {
       width: 5rem !important;
     }
@@ -26,11 +34,21 @@
       padding-left: 0;
       padding-right: 0;
     }
-    .main-content-expanded {
+    .main-content {
       margin-left: 16rem;
+      transition: margin-left 0.3s ease-in-out;
+    }
+    .main-content-full {
+      margin-left: 0;
     }
     .main-content-minimized {
       margin-left: 5rem;
+    }
+    .sidebar-icon {
+      transition: transform 0.3s ease;
+    }
+    .sidebar-open .sidebar-icon {
+      transform: rotate(180deg);
     }
   </style>
 </head>
@@ -38,7 +56,7 @@
 
   <div class="flex h-screen overflow-hidden">
     <!-- Sidebar -->
-    <div id="sidebar" class="w-64 bg-gray-900 text-white p-6 space-y-6 fixed h-screen shadow-lg transition-all duration-300">
+    <div id="sidebar" class="sidebar bg-gray-900 text-white p-6 space-y-6 fixed h-screen shadow-lg">
       <h2 class="text-3xl font-bold mb-4">Dashboard</h2>
       <nav class="space-y-2">
         <a href="dashboard.html" class="flex items-center gap-3 py-2 px-4 bg-blue-600 rounded hover:bg-blue-700 transition">
@@ -60,13 +78,13 @@
     </div>
 
     <!-- Main Content -->
-    <div id="mainContent" class="flex-1 p-6 ml-64 overflow-y-auto h-screen bg-gray-950 transition-all duration-300">
+    <div id="mainContent" class="main-content flex-1 p-6 overflow-y-auto h-screen bg-gray-950">
       <!-- Top Navigation -->
       <div class="flex justify-between items-center bg-gray-900 p-4 rounded-lg shadow mb-6">
         <div class="flex items-center gap-4">
           <!-- Sidebar Toggle Button -->
-          <button onclick="toggleSidebar()" class="text-white bg-gray-800 border border-gray-700 p-2 rounded-md hover:bg-gray-700 transition">
-            <i class="fas fa-bars"></i>
+          <button id="sidebarToggle" class="text-white bg-gray-800 border border-gray-700 p-2 rounded-md hover:bg-gray-700 transition">
+            <i class="fas fa-bars sidebar-icon"></i>
           </button>
           <h1 class="text-2xl font-semibold">Dashboard Overview</h1>
         </div>
@@ -126,24 +144,38 @@
 
   <!-- JavaScript -->
   <script>
+    // Sidebar Toggle
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('mainContent');
+    
+    let sidebarOpen = true;
+    
     function toggleSidebar() {
-      const sidebar = document.getElementById("sidebar");
-      const mainContent = document.getElementById("mainContent");
-      sidebar.classList.toggle("sidebar-minimized");
-      if (sidebar.classList.contains("sidebar-minimized")) {
-        mainContent.classList.remove("ml-64");
-        mainContent.classList.add("ml-20");
+      sidebarOpen = !sidebarOpen;
+      
+      if (sidebarOpen) {
+        sidebar.classList.remove('sidebar-hidden');
+        mainContent.classList.remove('main-content-full');
+        mainContent.classList.add('main-content');
+        sidebarToggle.classList.add('sidebar-open');
       } else {
-        mainContent.classList.remove("ml-20");
-        mainContent.classList.add("ml-64");
+        sidebar.classList.add('sidebar-hidden');
+        mainContent.classList.remove('main-content');
+        mainContent.classList.add('main-content-full');
+        sidebarToggle.classList.remove('sidebar-open');
       }
     }
+    
+    sidebarToggle.addEventListener('click', toggleSidebar);
 
+    // Profile dropdown
     function toggleDropdown() {
       const dropdown = document.getElementById("dropdownMenu");
       dropdown.classList.toggle("hidden");
     }
 
+    // Close dropdown when clicking outside
     window.addEventListener("click", function (e) {
       const dropdown = document.getElementById("dropdownMenu");
       const buttonArea = document.querySelector(".profile-container");
@@ -152,6 +184,7 @@
       }
     });
 
+    // Fetch user name
     fetch('get_user.php')
       .then(response => response.json())
       .then(data => {
@@ -167,6 +200,7 @@
         document.getElementById("usernameDisplay").textContent = "Guest";
       });
 
+    // Dashboard data
     async function loadDashboardData() {
       try {
         const res = await fetch('dashboard_data.php');
@@ -181,11 +215,10 @@
 
         const options = {
           chart: {
-            type: 'area',
+            type: 'line',
             height: 350,
             foreColor: '#fff',
-            toolbar: { show: false },
-            background: 'transparent'
+            toolbar: { show: false }
           },
           series: [{
             name: 'Monthly Sales',
@@ -193,66 +226,37 @@
           }],
           xaxis: {
             categories: months,
-            labels: {
-              style: { colors: '#cbd5e1' }
-            },
-            axisBorder: { color: '#4b5563' },
-            axisTicks: { color: '#4b5563' },
-            tooltip: {
-              enabled: true
-            }
+            labels: { style: { colors: '#ccc' } },
+            axisBorder: { color: '#374151' },
+            axisTicks: { color: '#374151' }
           },
           yaxis: {
             labels: {
-              style: { colors: '#cbd5e1' },
+              style: { colors: '#ccc' },
               formatter: val => `$${val.toLocaleString()}`
             }
           },
-          dataLabels: {
-            enabled: true,
-            style: {
-              colors: ['#fff']
-            },
-            background: {
-              enabled: true,
-              foreColor: '#000',
-              padding: 4,
-              borderRadius: 4,
-              borderWidth: 0,
-            }
-          },
           colors: ['#3B82F6'],
-          stroke: {
-            curve: 'smooth',
-            width: 3
-          },
+          stroke: { curve: 'smooth', width: 3 },
           fill: {
             type: 'gradient',
             gradient: {
               shade: 'dark',
-              gradientToColors: ['#2563EB'],
-              shadeIntensity: 0.8,
-              type: 'vertical',
-              opacityFrom: 0.8,
-              opacityTo: 0.2
+              gradientToColors: ['#60A5FA'],
+              shadeIntensity: 1,
+              type: 'horizontal',
+              opacityFrom: 0.7,
+              opacityTo: 0.3,
             }
           },
           tooltip: {
             theme: 'dark',
-            style: {
-              fontSize: '14px'
-            },
-            x: {
-              show: true
-            },
+            style: { fontSize: '14px' },
             y: {
               formatter: val => `$${val.toLocaleString()}`
             }
           },
-          grid: {
-            borderColor: '#374151',
-            strokeDashArray: 4
-          }
+          grid: { borderColor: '#374151' }
         };
 
         const chart = new ApexCharts(document.querySelector("#salesChart"), options);
@@ -262,6 +266,7 @@
       }
     }
 
+    // Initialize dashboard
     window.onload = function () {
       loadDashboardData();
       setInterval(() => {
